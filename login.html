@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AXIOM // LOGIN</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Space+Mono&display=swap');
+        body { background: #000; color: #fff; font-family: 'Space Mono', monospace; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .axiom-font { font-family: 'Syncopate', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); }
+        .scanline { position: fixed; top: 0; left: 0; width: 100%; height: 2px; background: rgba(147, 51, 234, 0.5); opacity: 0.3; pointer-events: none; animation: scan 6s linear infinite; }
+        @keyframes scan { 0% { top: -10%; } 100% { top: 110%; } }
+    </style>
+</head>
+<body class="bg-[url('https://assets.codepen.io/13471/sparkle-bg.png')] bg-cover">
+    <div class="scanline"></div>
+    <div id="login-card" class="glass p-12 rounded-3xl w-full max-w-md relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-600 to-transparent"></div>
+        
+        <div class="text-center mb-10">
+            <h1 class="axiom-font text-3xl mb-2 text-transparent bg-clip-text bg-gradient-to-r from-white to-purple-400">AXIOM</h1>
+            <p class="text-[10px] tracking-[0.5em] opacity-50">SYSTEM ACCESS</p>
+        </div>
+
+        <div class="space-y-6">
+            <div class="relative group">
+                <input type="password" id="pass" placeholder="ENTER ACCESS KEY" 
+                       class="w-full bg-black/50 border border-white/10 rounded-xl p-4 text-center text-xs tracking-widest focus:border-purple-600 focus:outline-none transition-all placeholder:text-white/20">
+                <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-[1px] bg-purple-600 transition-all group-hover:w-full"></div>
+            </div>
+
+            <button id="btn" class="w-full bg-white text-black font-bold py-4 rounded-xl text-xs hover:bg-purple-600 hover:text-white transition-all axiom-font tracking-wider">
+                AUTHENTICATE
+            </button>
+        </div>
+
+        <div id="err" class="mt-6 text-center text-[10px] text-red-500 opacity-0 tracking-widest">ACCESS DENIED</div>
+    </div>
+
+    <script>
+        gsap.from("#login-card", { duration: 1.5, y: 50, opacity: 0, ease: "power4.out" });
+
+        const login = () => {
+            const p = document.getElementById('pass').value;
+            if(p === "axiomwin") {
+                gsap.to("#login-card", { scale: 0.95, opacity: 0, duration: 0.5, onComplete: () => {
+                    localStorage.setItem('adm', '1');
+                    location.href = 'axiom-admin.html';
+                }});
+            } else {
+                const err = document.getElementById('err');
+                gsap.to(err, { opacity: 1, duration: 0.2, yoyo: true, repeat: 3 });
+                document.getElementById('pass').value = '';
+            }
+        };
+
+        document.getElementById('btn').onclick = login;
+        document.getElementById('pass').onkeydown = (e) => { if(e.key === 'Enter') login(); };
+    </script>
+</body>
+</html>

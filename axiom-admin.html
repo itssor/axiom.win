@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><title>AXIOM // ADMIN</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@700&family=Space+Mono&display=swap');
+        body { background: #000; color: #fff; font-family: 'Space Mono', monospace; min-height: 100vh; }
+        .axiom-font { font-family: 'Syncopate', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+    </style>
+</head>
+<body class="p-10 lg:p-20 border-t-4 border-purple-600">
+    <div class="max-w-6xl mx-auto">
+        <header class="flex justify-between items-end mb-16">
+            <div>
+                <h1 class="axiom-font text-3xl mb-2 text-transparent bg-clip-text bg-gradient-to-r from-white to-purple-500">AXIOM_ADMIN</h1>
+                <p class="text-[10px] tracking-[0.5em] opacity-40">SECURE UPLINK ESTABLISHED</p>
+            </div>
+            <button onclick="localStorage.removeItem('adm'); location.href='index.html'" class="text-[10px] text-red-500 hover:text-white transition-colors">TERMINATE_SESSION</button>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+            <!-- Upload Form -->
+            <div class="lg:col-span-8 space-y-6">
+                <div class="glass p-8 rounded-3xl relative overflow-hidden group">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-purple-600 opacity-50 group-hover:opacity-100 transition-all"></div>
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="axiom-font text-sm opacity-50" id="form-title">NEW_INJECTION</h2>
+                        <button id="cancel-edit" class="hidden text-[9px] text-red-400 hover:text-red-300">CANCEL_EDIT</button>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="space-y-2">
+                            <label class="text-[9px] opacity-30 tracking-widest">SCRIPT_NAME</label>
+                            <input id="n" class="w-full bg-black/50 border border-white/10 p-4 rounded-xl text-xs focus:border-purple-600 outline-none transition-all placeholder:opacity-20" placeholder="Ex: Universal ESP">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-[9px] opacity-30 tracking-widest">TARGET_GAME_ID (OPTIONAL)</label>
+                            <input id="gid" class="w-full bg-black/50 border border-white/10 p-4 rounded-xl text-xs focus:border-purple-600 outline-none transition-all placeholder:opacity-20" placeholder="Ex: 12345678">
+                        </div>
+                    </div>
+
+                    <!-- Categories -->
+                    <div class="flex gap-6 mb-4 px-1">
+                        <label class="flex items-center gap-2 cursor-pointer group select-none">
+                            <input type="checkbox" id="isUniv" class="appearance-none w-4 h-4 bg-black/50 border border-white/20 rounded checked:bg-purple-600 checked:border-purple-600 transition-all">
+                            <span class="text-[9px] opacity-50 group-hover:text-purple-400 transition-colors tracking-wider">UNIVERSAL</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group select-none">
+                            <input type="checkbox" id="isCrack" class="appearance-none w-4 h-4 bg-black/50 border border-white/20 rounded checked:bg-red-600 checked:border-red-600 transition-all">
+                            <span class="text-[9px] opacity-50 group-hover:text-red-400 transition-colors tracking-wider">CRACKED</span>
+                        </label>
+                    </div>
+
+                    <div class="space-y-2 mb-4">
+                        <label class="text-[9px] opacity-30 tracking-widest">DESCRIPTION</label>
+                        <textarea id="d" class="w-full bg-black/50 border border-white/10 p-4 rounded-xl h-24 text-xs focus:border-purple-600 outline-none transition-all resize-none placeholder:opacity-20" placeholder="Brief system functionality overview..."></textarea>
+                    </div>
+
+                    <div class="space-y-2 mb-6">
+                        <label class="text-[9px] opacity-30 tracking-widest">LUA_SOURCE</label>
+                        <textarea id="c" class="w-full bg-black/50 border border-white/10 p-4 rounded-xl h-64 text-[10px] font-mono focus:border-purple-600 outline-none transition-all resize-none placeholder:opacity-20" placeholder="-- Paste raw source here --"></textarea>
+                    </div>
+
+                    <button id="up" class="w-full py-4 bg-white text-black font-bold rounded-xl axiom-font text-xs hover:bg-purple-600 hover:text-white transition-all">
+                        ENCRYPT & DEPLOY
+                    </button>
+                </div>
+            </div>
+
+            <!-- List -->
+            <div class="lg:col-span-4">
+                 <div class="glass p-6 rounded-3xl h-[600px] flex flex-col">
+                    <h2 class="axiom-font text-sm mb-6 opacity-50">DATABASE</h2>
+                    <div id="list" class="flex-1 overflow-y-auto space-y-3 pr-2 custom-scroll">
+                        <!-- Items injected here -->
+                    </div>
+                 </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, updateDoc, doc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+        
+        // Obfuscation / Encryption Logic
+        const encrypt = (script) => {
+            const key = Math.floor(Math.random() * 255);
+            let bytes = [];
+            for (let i = 0; i < script.length; i++) {
+                bytes.push((script.charCodeAt(i) ^ key));
+            }
+            
+            // Obfuscated Variable Names
+            const vKey = 'k' + Math.random().toString(36).substring(7);
+            const vTable = 't' + Math.random().toString(36).substring(7);
+            const vStr = 's' + Math.random().toString(36).substring(7);
+            const vFunc = 'f' + Math.random().toString(36).substring(7);
+            
+            // Generate the loader with minified structure
+            return `
+local ${vKey}=${key};local ${vTable}={${bytes.join(',')}};local ${vStr}="";
+for i,v in pairs(${vTable}) do ${vStr}=${vStr}..string.char(bit32.bxor(v,${vKey})) end;
+local ${vFunc}=loadstring(${vStr});if ${vFunc} then ${vFunc}() end
+            `.trim();
+        };
+
+        const db = getFirestore(initializeApp({ apiKey: "AIzaSyBykgmRtL2EkqgCJGsiEjP9zO6AQcPA77w", projectId: "axiomdotwin" }));
+
+        if(localStorage.getItem('adm') !== '1') location.href='login.html';
+
+        let editId = null;
+
+        // Animations
+        gsap.from("header", { y: -50, opacity: 0, duration: 1 });
+        gsap.from(".glass", { y: 50, opacity: 0, stagger: 0.2, duration: 1, ease: "power2.out" });
+
+        const resetForm = () => {
+            document.getElementById('n').value = '';
+            document.getElementById('gid').value = '';
+            document.getElementById('d').value = '';
+            document.getElementById('c').value = '';
+            document.getElementById('isUniv').checked = false;
+            document.getElementById('isCrack').checked = false;
+            
+            editId = null;
+            document.getElementById('up').innerText = "ENCRYPT & DEPLOY";
+            document.getElementById('form-title').innerText = "NEW_INJECTION";
+            document.getElementById('cancel-edit').classList.add('hidden');
+        };
+
+        document.getElementById('cancel-edit').onclick = resetForm;
+
+        document.getElementById('up').onclick = async () => {
+            const btn = document.getElementById('up');
+            const originalText = btn.innerText;
+            btn.innerText = "PROCESSING...";
+            btn.disabled = true;
+
+            try {
+                const gameId = document.getElementById('gid').value;
+                let thumb = "https://via.placeholder.com/400x225/111/8c52ff?text=AXIOM";
+                let gameName = "";
+
+                if(gameId) {
+                    try {
+                        const res = await fetch(`/.netlify/functions/fetch-game-data?id=${gameId}`);
+                        const data = await res.json();
+                        if(data.url) thumb = data.url;
+                        if(data.name) gameName = data.name;
+                    } catch(e) { console.error("Game fetch failed", e); }
+                }
+
+                const rawCode = document.getElementById('c').value;
+                const securedCode = encrypt(rawCode);
+
+                const payload = {
+                    name: document.getElementById('n').value,
+                    desc: document.getElementById('d').value,
+                    code: securedCode,
+                    source: rawCode, // Store raw source for editing
+                    thumb: thumb,
+                    gameId: gameId,
+                    gameName: gameName,
+                    isUniversal: document.getElementById('isUniv').checked,
+                    isCracked: document.getElementById('isCrack').checked,
+                    date: new Date().toISOString()
+                };
+
+                if (editId) {
+                    await updateDoc(doc(db, "scripts", editId), payload);
+                    btn.innerText = "UPDATED SUCCESSFULLY";
+                } else {
+                    await addDoc(collection(db, "scripts"), payload);
+                    btn.innerText = "DEPLOYED SUCCESSFULLY";
+                }
+
+                btn.classList.add("bg-green-500", "text-white");
+                setTimeout(() => {
+                    resetForm();
+                    btn.innerText = "ENCRYPT & DEPLOY";
+                    btn.classList.remove("bg-green-500", "text-white");
+                    btn.disabled = false;
+                }, 1500);
+
+            } catch(e) {
+                console.error(e);
+                btn.innerText = "ERROR - CHECK CONSOLE";
+                btn.disabled = false;
+            }
+        };
+
+        onSnapshot(collection(db, "scripts"), (snap) => {
+            const l = document.getElementById('list'); 
+            l.innerHTML = "";
+            snap.forEach((d) => {
+                const data = d.data();
+                const item = document.createElement('div');
+                item.className = "p-4 bg-white/5 rounded-xl border border-white/5 flex justify-between items-center group hover:bg-white/10 transition-all";
+                item.innerHTML = `
+                    <div class="flex-1 min-w-0 mr-4">
+                        <div class="font-bold text-[10px] text-purple-400 mb-1 truncate">${data.name}</div>
+                        <div class="text-[8px] opacity-30 font-mono flex gap-2">
+                            <span>${d.id.slice(0,6)}...</span>
+                            ${data.isUniversal ? '<span class="text-blue-400">UNIV</span>' : ''}
+                            ${data.isCracked ? '<span class="text-red-400">CRACK</span>' : ''}
+                        </div>
+                    </div>
+                    <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                        <button class="edit-btn text-[9px] text-blue-400 hover:text-white transition-colors">EDIT</button>
+                        <button class="del-btn text-[9px] text-red-500 hover:text-red-400 transition-colors">DEL</button>
+                    </div>
+                `;
+                
+                item.querySelector('.del-btn').onclick = async () => {
+                    if(confirm('CONFIRM DELETION?')) await deleteDoc(doc(db, "scripts", d.id));
+                };
+
+                item.querySelector('.edit-btn').onclick = () => {
+                    editId = d.id;
+                    document.getElementById('n').value = data.name || '';
+                    document.getElementById('gid').value = data.gameId || '';
+                    document.getElementById('d').value = data.desc || '';
+                    document.getElementById('c').value = data.source || ''; // Load raw source
+                    document.getElementById('isUniv').checked = !!data.isUniversal;
+                    document.getElementById('isCrack').checked = !!data.isCracked;
+                    
+                    document.getElementById('up').innerText = "UPDATE SCRIPT";
+                    document.getElementById('form-title').innerText = `EDITING: ${d.id.slice(0,6).toUpperCase()}`;
+                    document.getElementById('cancel-edit').classList.remove('hidden');
+                };
+
+                l.appendChild(item);
+            });
+        });
+    </script>
+</body>
+</html>
